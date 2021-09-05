@@ -1,0 +1,78 @@
+plugins {
+	id 'org.springframework.boot' version '2.4.5'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id 'java'
+}
+
+group = 'com.singh.rupesh'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+repositories {
+	mavenCentral()
+}
+
+//configure JAXB in your build file and add the genJaxb task, which Gradle uses to generate Java classes from the XSD file
+sourceSets {
+	main {
+		java {
+			srcDir 'src/main/java'
+			srcDir 'build/generated-sources/jaxb'
+		}
+	}
+}
+
+task genJaxb {
+	ext.sourcesDir = "${buildDir}/generated-sources/jaxb"
+	ext.schema = "src/main/resources/countries.xsd"
+
+	outputs.dir sourcesDir
+//Because Gradle does not have a JAXB plugin (yet), it involves an Ant task
+	doLast() {
+		project.ant {
+			taskdef name: "xjc", classname: 'com.sun.tools.xjc.XJCTask',
+					classpath: configurations.jaxb.asPath
+			mkdir(dir: sourcesDir)
+
+			xjc(destdir: sourcesDir, schema: schema) {
+				arg(value: "-wsdl")
+				produces(dir: sourcesDir, includes: "**/*.java")
+			}
+		}
+	}
+}
+
+compileJava.dependsOn genJaxb
+
+configurations {
+	jaxb
+}
+
+bootJar {
+	archiveBaseName = 'soap-service-demo'
+	archiveVersion =  '0.1.0'
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-web-services'
+	//include spring-ws-core and wsdl4j as dependencies
+	//The web service domain is defined in an XML schema file (XSD) that Spring-WS will automatically export as a WSDL
+	implementation 'wsdl4j:wsdl4j'
+	implementation 'org.glassfish.jaxb:jaxb-runtime'
+
+
+	//implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.1'
+	//implementation 'com.sun.activation:javax.activation:1.2.0'
+	//implementation 'javax.xml.bind:jaxb-api:2.3.1'
+	//implementation 'com.sun.xml.bind:jaxb-core:2.3.0'
+	//implementation 'com.sun.xml.bind:jaxb-impl:2.3.0'
+	//compile(files(genJaxb.classesDir).builtBy(genJaxb))
+
+	jaxb "com.sun.xml.bind:jaxb-xjc:2.1.7"
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+test {
+	useJUnitPlatform()
+}

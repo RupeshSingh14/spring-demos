@@ -1,1 +1,2 @@
 include ':async-demo'
+include ':soap-service-demo'
